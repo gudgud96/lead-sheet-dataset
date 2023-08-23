@@ -18,7 +18,7 @@ api_website = 'https://api.hooktheory.com/v1/songs/public/[song_id]?fields=ID,xm
 base_url = website + '/theorytab/artists/'
 genre_url = '/wiki/[genre_id]/genres'
 # alphabet_list = string.ascii_lowercase
-alphabet_list = 'x'
+alphabet_list = 'abcdefghijklmnopqrstuvwxyz0123456789'
 root_dir = '../datasets'
 root_xml = '../datasets/xml'
 
@@ -62,7 +62,7 @@ def map_notes_to_new_format(notes):
         res = {k : None for k in new_notes}
         res["sd"] = note["scale_degree"]
         res["octave"] = int(note["octave"])
-        res["beat"] = float(note["start_beat"])
+        res["beat"] = float(note["start_beat_abs"])
         res["duration"] = float(note["note_length"])
         res["isRest"] = True if note["isRest"] == "1" else False
         res["recordingEndBeat"] = None
@@ -100,7 +100,7 @@ def map_chords_to_new_format(chords):
             res["root"] = 1
         else:
             res["root"] = int(chord["sd"])
-        res["beat"] = float(chord["start_beat"])
+        res["beat"] = float(chord["start_beat_abs"])
         res["duration"] = float(chord["chord_duration"])
         
         # refer to `set_composition` in `roman_to_symbol.py`
@@ -179,8 +179,8 @@ def map_chords_to_new_format(chords):
 def xml_to_json(xml):
     # TODO: fix chords, notes, fix str and float etc.
     dict = xmltodict.parse(xml)
-    with open("test.json", "w+") as f:
-        json.dump(dict, f, indent=4)
+    # with open("test.json", "w+") as f:
+    #     json.dump(dict, f, indent=4)
     res = {}
     dict = dict["theorytab"]
 
@@ -257,6 +257,7 @@ def song_retrieval(song_url, path_song):
     res = {}
     res["url"] = website + song_url
     res["sections"] = {}
+    is_xml = False
     for i in range(len(song_id_list)):
         res["sections"][section_list[i]] = {}
         song_id = song_id_list[i]
@@ -269,9 +270,7 @@ def song_retrieval(song_url, path_song):
         if dict["jsonData"] is not None:
             res["sections"][section_list[i]]["jsonData"] = json.loads(dict["jsonData"])
         else:
-            # NOTE: we keep a list of urls which uses old xml format
-            with open(os.path.join(root_dir, "old_xml_format.txt"), "a+") as f:
-                f.write(song_url + "\n")
+            is_xml = True
             xmlDataDict = xml_to_json(dict["xmlData"])            
             res["sections"][section_list[i]]["jsonData"] = xmlDataDict
 
@@ -279,6 +278,10 @@ def song_retrieval(song_url, path_song):
 
     if not os.path.exists(path_song):
         os.makedirs(path_song)
+    if is_xml:
+        # NOTE: we keep a list of urls which uses old xml format
+        with open(os.path.join(root_dir, "old_xml_format.txt"), "a+") as f:
+            f.write(song_url + "\n")
     with open(os.path.join(path_song, 'song_info.json'), "w") as f:
         json.dump(res, f, indent=4)
 
@@ -369,7 +372,7 @@ def traverse_website(ch):
 
 if __name__ == '__main__':
 
-    # song_retrieval("/theorytab/view/xxanaxx/story", "./")
+    # song_retrieval("/theorytab/view/chumbawamba/amnesia", "./")
 
     if not os.path.exists(root_dir):
         os.makedirs(root_dir)
