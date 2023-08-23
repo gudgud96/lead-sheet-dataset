@@ -18,7 +18,7 @@ api_website = 'https://api.hooktheory.com/v1/songs/public/[song_id]?fields=ID,xm
 base_url = website + '/theorytab/artists/'
 genre_url = '/wiki/[genre_id]/genres'
 # alphabet_list = string.ascii_lowercase
-alphabet_list = 'abcdefghijklmnopqrstuvwxyz0123456789'
+alphabet_list = 'x'
 root_dir = '../datasets'
 root_xml = '../datasets/xml'
 
@@ -62,7 +62,7 @@ def map_notes_to_new_format(notes):
         res = {k : None for k in new_notes}
         res["sd"] = note["scale_degree"]
         res["octave"] = int(note["octave"])
-        res["beat"] = float(note["start_beat_abs"])
+        res["beat"] = float(note["start_beat_abs"]) + 1
         res["duration"] = float(note["note_length"])
         res["isRest"] = True if note["isRest"] == "1" else False
         res["recordingEndBeat"] = None
@@ -100,7 +100,7 @@ def map_chords_to_new_format(chords):
             res["root"] = 1
         else:
             res["root"] = int(chord["sd"])
-        res["beat"] = float(chord["start_beat_abs"])
+        res["beat"] = float(chord["start_beat_abs"]) + 1
         res["duration"] = float(chord["chord_duration"])
         
         # refer to `set_composition` in `roman_to_symbol.py`
@@ -233,6 +233,8 @@ def xml_to_json(xml):
 
 
 def song_retrieval(song_url, path_song):
+    sleep_time = random.uniform(0.1, 0.3)
+    time.sleep(sleep_time)
     response = requests.get(website + song_url)
     soup = BeautifulSoup(response.text, 'html.parser')
     
@@ -245,6 +247,8 @@ def song_retrieval(song_url, path_song):
         song_id_list[i] = song_id
 
     genre_id = soup.findAll("multiselect", {"items": "genres"})[0]['wikiid']
+    sleep_time = random.uniform(0.1, 0.3)
+    time.sleep(sleep_time)
     response = requests.get(website + genre_url.replace("[genre_id]", genre_id))
     dict = json.loads(response.text)
     genres_dict = []
@@ -262,6 +266,8 @@ def song_retrieval(song_url, path_song):
         res["sections"][section_list[i]] = {}
         song_id = song_id_list[i]
         res["sections"][section_list[i]]["songId"] = song_id
+        sleep_time = random.uniform(0.1, 0.3)
+        time.sleep(sleep_time)
         response = requests.get(api_website.replace("[song_id]", song_id))
 
         dict = json.loads(response.text)
@@ -310,7 +316,7 @@ def traverse_website(ch):
     artist_count = 0
     song_count = 0
 
-    sleep_time = random.uniform(0.2, 0.6)
+    sleep_time = random.uniform(0.1, 0.2)
     time.sleep(sleep_time)
     url = base_url + ch
     response_tmp = requests.get(url)
@@ -324,6 +330,7 @@ def traverse_website(ch):
     for page in range(1, 9999):
         url = 'https://www.hooktheory.com/theorytab/artists/'+ch+'?page=' + str(page)
         print(url)
+        sleep_time = random.uniform(0.1, 0.2)
         time.sleep(sleep_time)
         response_tmp = requests.get(url)
         soup = BeautifulSoup(response_tmp.text, 'html.parser')
@@ -349,6 +356,7 @@ def traverse_website(ch):
 
     for url_artist in url_artist_list:
         artist_count += 1
+        sleep_time = random.uniform(0.1, 0.3)
         time.sleep(sleep_time)
         artist_name = url_artist.split('/')[-1]
         print(artist_name)
@@ -391,6 +399,7 @@ if __name__ == '__main__':
             archive_artist = json.load(f)
 
         count_ok = 0
+        ctr = 0
         song_count = archive_artist['num_song']
         
         path_ch = os.path.join(root_xml, ch)
@@ -403,11 +412,9 @@ if __name__ == '__main__':
             for s_name in archive_artist[ch][a_name]:
 
                 try:
-                    print('(%3d/%3d) %s   %s' % (count_ok, song_count, a_name, s_name))
+                    print('(%3d/%3d/%3d) %s   %s' % (count_ok, ctr, song_count, a_name, s_name))
                     path_song = os.path.join(path_ch, a_name, s_name)
 
-                    sleep_time = random.uniform(0.2, 0.6)
-                    time.sleep(sleep_time)
                     song_url = '/theorytab/view/' + a_name + '/' + s_name
                     song_retrieval(song_url, path_song)
 
@@ -415,5 +422,7 @@ if __name__ == '__main__':
 
                 except Exception as e:
                     print(song_url, str(e))
+
+                ctr += 1
 
     print('total:', count_ok)
